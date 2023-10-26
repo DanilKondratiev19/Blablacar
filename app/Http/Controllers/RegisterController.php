@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 use App\Models\User;
+use App\Rules\ValidDate;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\QueryException;
-use Illuminate\Validation\Rules\Password;
 
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 
@@ -42,11 +43,44 @@ public function showNameForm(Request $request)
 
     // Если валидация прошла успешно, сохраните имя в сессии
     $request->session()->put('registration_name', $name);
-    return redirect()->route('register.password')->with(compact('name'));
+    return redirect()->route('register.birthday')->with(compact('name'));
    // return view('auth.password', compact('name'));
     
 }
+public function store(Request $request)
+{
+    $request->validate([
+        'date' => ['required', 'date_format:d/m/Y', new ValidDate],
+    ]);
 
+    $dateOfBirth = $request->input('date');
+
+    // Сохраняем дату рождения в сессии
+    session(['date_of_birth' => $dateOfBirth]);
+   
+    return redirect()->route('register.gender');
+}
+
+public function gender(Request $request)
+{
+    $selectedGender = $request->input('radio');
+  
+    session(['gender' => $selectedGender]);
+    return redirect()->route('register.telephone');
+   
+}
+
+public function telephone(Request $request)
+{
+    $validated = $request->validate([
+        'telephone' => ['required', 'regex:/^([0-9\s\-\+\(\)]*)$/', 'digits_between:9,13'],
+    ]);
+    
+    $telephone = $request->input('telephone');
+    session(['telephone' => $telephone]);
+    return redirect()->route('register.password');
+   
+}
 
 
 public function register(Request $request)
@@ -57,30 +91,49 @@ public function register(Request $request)
         'password.required' => 'Поле "Пароль" обязательно для заполнения.',
         'password.min' => 'Пароль должен содержать минимум 8 символов.',
     ]);
+
     $password = $request->input('password');
     $request->session()->put('registration_password', $password);
+
     $email = $request->session()->get('registration_email');
     $name = $request->session()->get('registration_name');
-    
+    $dateOfBirth = $request->session()->get('date_of_birth');
+    $gender = $request->session()->get('gender');
+    $telephone = $request->session()->get('telephone');
+
     $existingUser = User::where('email', $email)->first();
 
     if ($existingUser) {
         return redirect()->route('auth.failed');
+    }
+    
+    
+  
+    if ($dateOfBirth) {
+        $dateOfBirth = \DateTime::createFromFormat('d/m/Y', $dateOfBirth)->format('Y-m-d');
+    } else {
+        $dateOfBirth = null;
     }
 
     $user = new User([
         'email' => $email,
         'name' => $name,
         'password' => Hash::make($request->session()->get('registration_password')),
+        'date_of_birth' => $dateOfBirth, // Добавляем дату рождения
+        'gender'=> $gender,
+        'telephone'=>$telephone,
     ]);
     
 
     // Сохранение пользователя в базе данных
     $user->save();
+    //Очестка сессии
     $request->session()->forget('registration_name');
     $request->session()->forget('registration_email');
     $request->session()->forget('registration_password');
-
+    $request->session()->forget('date_of_birth');
+    $request->session()->forget('gender');
+    $request->session()->forget('telephone');
     // Перенаправление пользователя
     return redirect()->route('loggedout');
 }

@@ -37,10 +37,29 @@ Route::get('/register/name', function(){
 })->name('register.name');
 Route::post('/register/name', [RegisterController::class, 'showNameForm']);
 
+Route::get('/register/birthday' , function(){ 
+    return view('auth.birthday');
+})->name('register.birthday');
+Route::post('/register/birthday', [RegisterController::class, 'store']);
+
+
 Route::get('/register/password' , function(){ 
     return view('auth.password');
 })->name('register.password');
 Route::post('/register/password', [RegisterController::class, 'register']);
+
+
+Route::get('/register/gender' , function(){ 
+    return view('auth.gender');
+})->name('register.gender');
+Route::post('/register/gender', [RegisterController::class, 'gender']);
+
+
+Route::get('/register/telephone' , function(){ 
+    return view('auth.telephone');
+})->name('register.telephone');
+Route::post('/register/telephone', [RegisterController::class, 'telephone']);
+
 
 Route::get('/register/loggedout',function(){
     return view('auth.loggedout');
